@@ -49,21 +49,25 @@
       display:block;
     }
 
+    /* Mobile-only: logo closer to top */
+    @media (max-width: 768px){
+      .logo{ margin-top:-12px; }
+    }
+
     /* Draggable BACK wrapper */
     .backWrap{
       position:absolute;
       left:70px;
       top:50%;
-      transform:translateY(-50%); /* purely visual; we store top/left anyway */
       z-index:20;
 
       user-select:none;
-      touch-action:none;
       cursor:grab;
 
       padding:8px 10px;
       border-radius:0;
 
+      touch-action:none; /* drag */
       visibility:hidden; /* hide until positioned */
     }
     .backWrap.ready{ visibility:visible; }
@@ -89,14 +93,17 @@
       text-align:center;
       padding:10px;
       border-radius:0;
+
+      /* IMPORTANT: pointer events pinch+drag */
       touch-action:none;
-      visibility:hidden; /* hide until positioned (fix flicker) */
-      transform-origin: top left; /* important for scaling */
+
+      visibility:hidden; /* hide until positioned */
+      transform-origin: top left;
     }
     .drag.ready{ visibility:visible; }
     .drag:active{ cursor:grabbing; }
 
-    /* Selection box FIX: pseudo-element (no clipping on mobile) */
+    /* Selection box (no clipping on mobile) */
     .drag.is-dragging,
     .backWrap.is-dragging{
       outline:none;
@@ -132,7 +139,7 @@
       letter-spacing:1.8px;
     }
 
-    /* Socials footer */
+    /* Socials */
     .socials{
       position:fixed;
       left:50%;
@@ -145,19 +152,23 @@
       user-select:none;
       white-space:nowrap;
     }
-    .socials a{
-      color:inherit;
-      text-decoration:none;
-    }
-    .socials a:hover{
-      color:rgba(17,17,17,0.9);
-    }
+    .socials a{ color:inherit; text-decoration:none; }
+    .socials a:hover{ color:rgba(17,17,17,0.9); }
 
-    /* Mobile-only: start smaller WITHOUT changing desktop */
+    /* Mobile-only adjustments:
+       - Start smaller via JS scale
+       - Ensure image is as wide or wider than title by constraining title width to match image block
+    */
     @media (max-width: 768px){
-      .drag img{
-        width:140px;
-        height:140px;
+      /* Keep the *element* itself compact before scaling; label will wrap within this width */
+      .drag img{ width:160px; height:160px; }
+      .drag .label{
+        width:160px;      /* title box can't be wider than image */
+        margin-left:auto;
+        margin-right:auto;
+        white-space:normal;
+        word-break:break-word;
+        line-height:1.25;
       }
     }
 
@@ -197,7 +208,6 @@
     </div>
   </a>
 
-  <!-- Socials -->
   <div class="socials" aria-label="Social links">
     <a href="https://www.instagram.com/r4n.wav/" target="_blank" rel="noopener">instagram</a>
     &nbsp;/&nbsp;
@@ -207,14 +217,14 @@
   </div>
 
   <script>
-    // ---------- Z-INDEX layering: last selected always on top ----------
+    // ---------- layering ----------
     let zCounter = 60;
     function bringToFront(el){
       zCounter += 1;
       el.style.zIndex = String(zCounter);
     }
 
-    // Storage
+    // ---------- storage ----------
     function getStored(key){
       try { return JSON.parse(localStorage.getItem(key) || "null"); }
       catch { return null; }
@@ -230,7 +240,6 @@
 
     function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
-    // Clamp on release/resize ONLY (visual out-of-bounds allowed while dragging)
     function clampToViewport(el, x, y){
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -239,149 +248,186 @@
       return { x: clamp(x, 0, vw - w), y: clamp(y, 0, vh - h) };
     }
 
-    // Mobile detection
     const IS_MOBILE = window.matchMedia("(max-width: 768px)").matches;
 
-    // ---------- DRAG (generic) ----------
-    function makeDraggable(el, linkEl, defaults){
+    // ---------- draggable (improved click behavior; works for BACK) ----------
+    function makeDraggable(el, linkEl){
       const storeKey = el.dataset.storeKey;
 
-      let dragging=false;
-      let startX=0,startY=0;
-      let offsetX=0,offsetY=0;
-      let movedEnough=false;
-      const MOVE_THRESHOLD=6;
+      let dragging = false;
+      let startX = 0, startY = 0;
+      let offsetX = 0, offsetY = 0;
+      let movedEnough = false;
+      const MOVE_THRESHOLD = 7;
 
       function pointerDown(e){
-        // Ignore drag if currently pinching on this element
+        // If pinching on this element, don't start drag
         if (el.dataset.pinching === "1") return;
 
-        dragging=true;
-        movedEnough=false;
+        dragging = true;
+        movedEnough = false;
 
         bringToFront(el);
-
         el.setPointerCapture?.(e.pointerId);
 
-        const rect=el.getBoundingClientRect();
-        startX=e.clientX; startY=e.clientY;
-        offsetX=e.clientX-rect.left;
-        offsetY=e.clientY-rect.top;
+        const rect = el.getBoundingClientRect();
+        startX = e.clientX; startY = e.clientY;
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
 
         el.classList.add("is-dragging");
-        el.style.cursor="grabbing";
+        el.style.cursor = "grabbing";
         e.preventDefault();
       }
 
       function pointerMove(e){
-        if(!dragging) return;
+        if (!dragging) return;
 
-        const dx=e.clientX-startX;
-        const dy=e.clientY-startY;
-        if(!movedEnough && Math.hypot(dx,dy)>MOVE_THRESHOLD) movedEnough=true;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!movedEnough && Math.hypot(dx, dy) > MOVE_THRESHOLD) {
+          movedEnough = true;
+          linkEl.dataset.dragging = "1";
+        }
 
-        setElPos(el, e.clientX-offsetX, e.clientY-offsetY);
-
-        if(movedEnough) linkEl.dataset.dragging="1";
+        setElPos(el, e.clientX - offsetX, e.clientY - offsetY);
         e.preventDefault();
       }
 
-      function pointerUp(e){
-        if(!dragging) return;
-        dragging=false;
+      function pointerUp(){
+        if (!dragging) return;
+        dragging = false;
 
         el.classList.remove("is-dragging");
-        el.style.cursor="grab";
+        el.style.cursor = "grab";
 
-        const left=parseFloat(el.style.left||"0");
-        const top =parseFloat(el.style.top ||"0");
-        const snapped=clampToViewport(el,left,top);
+        const left = parseFloat(el.style.left || "0");
+        const top  = parseFloat(el.style.top  || "0");
+        const snapped = clampToViewport(el, left, top);
 
-        setElPos(el,snapped.x,snapped.y);
+        setElPos(el, snapped.x, snapped.y);
         setStored(storeKey, snapped);
 
-        setTimeout(()=>{ delete linkEl.dataset.dragging; },0);
-        e.preventDefault();
+        setTimeout(() => { delete linkEl.dataset.dragging; }, 0);
       }
 
-      linkEl.addEventListener("click",(e)=>{
-        if(linkEl.dataset.dragging==="1"){
+      linkEl.addEventListener("click", (e) => {
+        if (linkEl.dataset.dragging === "1") {
           e.preventDefault();
           e.stopPropagation();
         }
       });
 
-      el.addEventListener("pointerdown",pointerDown);
-      window.addEventListener("pointermove",pointerMove,{passive:false});
-      window.addEventListener("pointerup",pointerUp,{passive:false});
+      el.addEventListener("pointerdown", pointerDown);
+      window.addEventListener("pointermove", pointerMove, { passive:false });
+      window.addEventListener("pointerup", pointerUp, { passive:false });
     }
 
-    // ---------- PINCH-TO-ZOOM (per element, mobile only) ----------
-    function distance(t1, t2){
-      const dx = t1.clientX - t2.clientX;
-      const dy = t1.clientY - t2.clientY;
-      return Math.hypot(dx, dy);
-    }
-
+    // ---------- smooth pinch-to-zoom (mobile only, non-glitchy) ----------
     function makePinchZoom(el){
       const scaleKey = el.dataset.scaleKey;
-      let scale = 1;
 
-      // Mobile starts smaller
-      const startScale = IS_MOBILE ? 0.72 : 1;
+      // Mobile start smaller; desktop = 1 (no scaling feature)
+      const START_SCALE = IS_MOBILE ? 0.72 : 1;
 
-      // Boundaries
+      // Boundaries (mobile only)
       const MIN_SCALE = IS_MOBILE ? 0.45 : 1;
       const MAX_SCALE = IS_MOBILE ? 1.35 : 1;
 
-      const stored = getStored(scaleKey);
-      scale = (typeof stored === "number") ? stored : startScale;
+      let scale = (typeof getStored(scaleKey) === "number") ? getStored(scaleKey) : START_SCALE;
       scale = clamp(scale, MIN_SCALE, MAX_SCALE);
 
+      // Apply scale
       el.style.transform = `scale(${scale})`;
       setStored(scaleKey, scale);
 
+      // Track pointers for pinch
+      const pts = new Map(); // pointerId -> {x,y}
+      let baseDist = 0;
+      let baseScale = scale;
+      let rafPending = false;
+
+      function dist(a, b){
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.hypot(dx, dy);
+      }
+
+      function applyPinch(){
+        rafPending = false;
+        if (pts.size !== 2) return;
+
+        const arr = Array.from(pts.values());
+        const d = dist(arr[0], arr[1]);
+
+        if (!baseDist) return;
+        const ratio = d / baseDist;
+
+        scale = clamp(baseScale * ratio, MIN_SCALE, MAX_SCALE);
+        el.style.transform = `scale(${scale})`;
+        setStored(scaleKey, scale);
+      }
+
       function snapIntoView(){
-        const left=parseFloat(el.style.left||"0");
-        const top =parseFloat(el.style.top ||"0");
-        const snapped=clampToViewport(el,left,top);
-        setElPos(el,snapped.x,snapped.y);
+        const left = parseFloat(el.style.left || "0");
+        const top  = parseFloat(el.style.top  || "0");
+        const snapped = clampToViewport(el, left, top);
+        setElPos(el, snapped.x, snapped.y);
         setStored(el.dataset.storeKey, snapped);
       }
 
-      let pinchStartDist = 0;
-      let pinchStartScale = scale;
+      if (!IS_MOBILE) return; // desktop unchanged
 
-      el.addEventListener("touchstart", (e) => {
-        if (!IS_MOBILE) return;
-        if (e.touches.length === 2) {
-          bringToFront(el);
+      el.addEventListener("pointerdown", (e) => {
+        // only consider touch/pen for pinch; ignore mouse
+        if (e.pointerType === "mouse") return;
+
+        bringToFront(el);
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        // If second finger goes down, begin pinch
+        if (pts.size === 2){
           el.dataset.pinching = "1";
-          pinchStartDist = distance(e.touches[0], e.touches[1]);
-          pinchStartScale = scale;
+          const arr = Array.from(pts.values());
+          baseDist = dist(arr[0], arr[1]);
+          baseScale = scale;
+        }
+      }, { passive:false });
+
+      el.addEventListener("pointermove", (e) => {
+        if (e.pointerType === "mouse") return;
+        if (!pts.has(e.pointerId)) return;
+
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (pts.size === 2){
+          // throttle with rAF to prevent lag/jitter
+          if (!rafPending){
+            rafPending = true;
+            requestAnimationFrame(applyPinch);
+          }
           e.preventDefault();
         }
       }, { passive:false });
 
-      el.addEventListener("touchmove", (e) => {
-        if (!IS_MOBILE) return;
-        if (e.touches.length === 2 && el.dataset.pinching === "1") {
-          const d = distance(e.touches[0], e.touches[1]);
-          const ratio = d / pinchStartDist;
-          scale = clamp(pinchStartScale * ratio, MIN_SCALE, MAX_SCALE);
-          el.style.transform = `scale(${scale})`;
-          setStored(scaleKey, scale);
-          e.preventDefault();
-        }
-      }, { passive:false });
+      function endPointer(e){
+        if (e.pointerType === "mouse") return;
 
-      el.addEventListener("touchend", (e) => {
-        if (!IS_MOBILE) return;
-        if (el.dataset.pinching === "1" && e.touches.length < 2) {
-          delete el.dataset.pinching;
-          snapIntoView();
+        if (pts.has(e.pointerId)) pts.delete(e.pointerId);
+
+        if (pts.size < 2){
+          baseDist = 0;
+          // pinch ended
+          if (el.dataset.pinching === "1"){
+            delete el.dataset.pinching;
+            snapIntoView();
+          }
         }
-      });
+      }
+
+      el.addEventListener("pointerup", endPointer, { passive:false });
+      el.addEventListener("pointercancel", endPointer, { passive:false });
+      el.addEventListener("pointerleave", endPointer, { passive:false });
 
       window.addEventListener("resize", () => {
         scale = clamp(scale, MIN_SCALE, MAX_SCALE);
@@ -391,7 +437,7 @@
       });
     }
 
-    // ---------- INIT (positions + flicker fix) ----------
+    // ---------- init positions (flicker fix) ----------
     function initElement(el, defaults){
       const saved = getStored(el.dataset.storeKey);
       const raw = saved ?? defaults;
@@ -409,41 +455,42 @@
       const p2Btn = document.getElementById("p2Btn");
       const backWrap = document.getElementById("backWrap");
 
-      // init positions FIRST (prevents left-snap flicker)
-      initElement(p1Btn, {
-        x: Math.max(40, (window.innerWidth*0.30) - (p1Btn.offsetWidth/2)),
-        y: Math.max(160, (window.innerHeight*0.55) - (p1Btn.offsetHeight/2))
-      });
-
-      initElement(p2Btn, {
-        x: Math.min(window.innerWidth - p2Btn.offsetWidth - 40, (window.innerWidth*0.62) - (p2Btn.offsetWidth/2)),
-        y: Math.max(160, (window.innerHeight*0.55) - (p2Btn.offsetHeight/2))
-      });
+      // Back starts closer to left edge ON MOBILE only
+      const backX = IS_MOBILE ? 12 : 70;
 
       initElement(backWrap, {
-        x: 70,
+        x: backX,
         y: (window.innerHeight / 2) - (backWrap.offsetHeight / 2)
       });
 
-      // wire dragging
-      makeDraggable(p1Btn, document.getElementById("p1Link"), {});
-      makeDraggable(p2Btn, document.getElementById("p2Link"), {});
-      makeDraggable(backWrap, document.getElementById("backLink"), {});
+      initElement(p1Btn, {
+        x: Math.max(24, (window.innerWidth * 0.30) - (p1Btn.offsetWidth / 2)),
+        y: Math.max(160, (window.innerHeight * 0.55) - (p1Btn.offsetHeight / 2))
+      });
 
-      // wire pinch zoom (mobile only)
+      initElement(p2Btn, {
+        x: Math.min(window.innerWidth - p2Btn.offsetWidth - 24, (window.innerWidth * 0.62) - (p2Btn.offsetWidth / 2)),
+        y: Math.max(160, (window.innerHeight * 0.55) - (p2Btn.offsetHeight / 2))
+      });
+
+      // drag
+      makeDraggable(backWrap, document.getElementById("backLink"));
+      makeDraggable(p1Btn, document.getElementById("p1Link"));
+      makeDraggable(p2Btn, document.getElementById("p2Link"));
+
+      // pinch (mobile only, smoother)
       makePinchZoom(p1Btn);
       makePinchZoom(p2Btn);
     });
 
     window.addEventListener("resize", () => {
-      // snap all draggable elements into viewport on resize
       const els = [document.getElementById("p1Btn"), document.getElementById("p2Btn"), document.getElementById("backWrap")];
       for (const el of els){
         if (!el) continue;
-        const left=parseFloat(el.style.left||"0");
-        const top =parseFloat(el.style.top ||"0");
-        const snapped=clampToViewport(el,left,top);
-        setElPos(el,snapped.x,snapped.y);
+        const left = parseFloat(el.style.left || "0");
+        const top  = parseFloat(el.style.top  || "0");
+        const snapped = clampToViewport(el, left, top);
+        setElPos(el, snapped.x, snapped.y);
         setStored(el.dataset.storeKey, snapped);
       }
     });
