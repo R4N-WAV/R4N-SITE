@@ -14,6 +14,8 @@
       --fg:#111111;
       --muted:rgba(17,17,17,0.65);
       --select: rgba(17,17,17,0.55);
+      --padX: 28px;   /* desktop left padding */
+      --padY: 10px;   /* top alignment padding */
     }
 
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -31,14 +33,41 @@
       letter-spacing:0.2px;
     }
 
-    .logo{
+    /* Header row: BACK (left) + centered logo (same line) */
+    .topBar{
+      position:relative;
       width:100%;
+      height:92px;          /* gives a stable row to align to */
+      padding-top:var(--padY);
+      z-index:5;
+    }
+
+    .backFixed{
+      position:absolute;
+      left:var(--padX);
+      top:50%;
+      transform:translateY(-50%);
+      text-decoration:none;
+      color:var(--muted);
+      font-size:13px;
+      letter-spacing:2px;
+      font-weight:500;
+      white-space:normal;       /* allow wrap */
+      line-height:1.2;
+      max-width:38vw;           /* so it can wrap on mobile nicely */
+      user-select:none;
+    }
+    .backFixed:hover{ color:rgba(17,17,17,0.90); }
+
+    .logo{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
       display:flex;
       justify-content:center;
-      padding-top:0px;
-      margin-top:-6px;
-      position:relative;
-      z-index:5;
+      align-items:center;
+      width:auto;
     }
     .logo a{display:inline-flex;text-decoration:none;}
     .logo img{
@@ -47,44 +76,16 @@
       object-fit:contain;
       display:block;
     }
+
+    /* Mobile-only: logo closer to top & keep back in same corner area */
     @media (max-width: 768px){
-      .logo{ margin-top:-12px; }
+      :root{ --padX: 14px; --padY: 2px; }
+      .topBar{ height:78px; }
+      .logo img{ width:136px; height:136px; } /* keep your same logo sizing */
+      .backFixed{ max-width:46vw; }           /* wraps if needed */
     }
 
-    /* BACK wrapper is draggable, but clicking the link must always work */
-    .backWrap{
-      position:absolute;
-      left:70px;
-      top:50%;
-      z-index:20;
-
-      user-select:none;
-      cursor:grab;
-
-      /* Bigger padding = easy drag area (click text still works) */
-      padding:12px 16px;
-      border-radius:0;
-
-      touch-action:none;
-      visibility:hidden;
-    }
-    .backWrap.ready{ visibility:visible; }
-    .backWrap:active{ cursor:grabbing; }
-
-    .backLink{
-      text-decoration:none;
-      color:var(--muted);
-      font-size:13px;
-      letter-spacing:2px;
-      font-weight:500;
-      display:inline-block;
-      white-space:nowrap;
-
-      cursor:pointer;
-      user-select:none;
-    }
-    .backLink:hover{ color:rgba(17,17,17,0.90); }
-
+    /* Draggable projects */
     .drag{
       position:absolute;
       z-index:10;
@@ -93,20 +94,18 @@
       text-align:center;
       padding:10px;
       border-radius:0;
-
       touch-action:none;
-      visibility:hidden;
+      visibility:hidden; /* hide until positioned (flicker fix) */
     }
     .drag.ready{ visibility:visible; }
     .drag:active{ cursor:grabbing; }
 
-    .drag.is-dragging,
-    .backWrap.is-dragging{
+    /* Selection box (no clipping on mobile) */
+    .drag.is-dragging{
       outline:none;
       border-radius:0;
     }
-    .drag.is-dragging::after,
-    .backWrap.is-dragging::after{
+    .drag.is-dragging::after{
       content:"";
       position:absolute;
       inset:0;
@@ -115,6 +114,7 @@
       border-radius:0;
     }
 
+    /* Desktop size */
     .drag img{
       width:210px;
       height:210px;
@@ -134,6 +134,20 @@
       letter-spacing:1.8px;
     }
 
+    /* Mobile-only: project buttons same size + title width <= image width */
+    @media (max-width: 768px){
+      .drag img{ width:170px; height:170px; }
+      .drag .label{
+        width:170px;
+        margin-left:auto;
+        margin-right:auto;
+        white-space:normal;
+        word-break:break-word;
+        line-height:1.25;
+      }
+    }
+
+    /* Socials */
     .socials{
       position:fixed;
       left:50%;
@@ -149,37 +163,22 @@
     .socials a{ color:inherit; text-decoration:none; }
     .socials a:hover{ color:rgba(17,17,17,0.9); }
 
-    /* Mobile-only: project buttons same size + title width <= image width */
-    @media (max-width: 768px){
-      .drag img{
-        width:170px;
-        height:170px;
-      }
-      .drag .label{
-        width:170px;
-        margin-left:auto;
-        margin-right:auto;
-        white-space:normal;
-        word-break:break-word;
-        line-height:1.25;
-      }
-    }
-
     a{color:inherit;-webkit-tap-highlight-color:transparent;}
   </style>
 </head>
 
 <body>
-  <div class="backWrap" id="backWrap" data-store-key="projects:back">
-    <a class="backLink" id="backLink" href="index.html" aria-label="Back to home">&lt; - BACK</a>
+  <div class="topBar" aria-label="Header">
+    <a class="backFixed" href="index.html" aria-label="Back to home">&lt; - BACK</a>
+
+    <div class="logo" id="logoBlock">
+      <a href="index.html" aria-label="Home">
+        <img src="assets/logo.png" alt="Logo">
+      </a>
+    </div>
   </div>
 
-  <div class="logo" id="logoBlock">
-    <a href="index.html" aria-label="Home">
-      <img src="assets/logo.png" alt="Logo">
-    </a>
-  </div>
-
+  <!-- Project 1 -->
   <a href="https://open.spotify.com/album/2pHA2yqsAC9uum0lE1kyV5?si=qG4s6773SyW9N3YUAzow8w"
      target="_blank" rel="noopener"
      id="p1Link" aria-label="TI KNIVER I HJERTET">
@@ -189,6 +188,7 @@
     </div>
   </a>
 
+  <!-- Project 2 -->
   <a href="https://open.spotify.com/album/4hGT9RG7lSGz9MtX85Jpta?si=MaSikX3wTL-xhOIH3aTsnQ"
      target="_blank" rel="noopener"
      id="p2Link" aria-label="FLAWLESS FASADE">
@@ -207,12 +207,14 @@
   </div>
 
   <script>
+    // ---------- layering ----------
     let zCounter = 60;
     function bringToFront(el){
       zCounter += 1;
       el.style.zIndex = String(zCounter);
     }
 
+    // ---------- storage ----------
     function getStored(key){
       try { return JSON.parse(localStorage.getItem(key) || "null"); }
       catch { return null; }
@@ -235,14 +237,7 @@
       return { x: clamp(x, 0, vw - w), y: clamp(y, 0, vh - h) };
     }
 
-    const IS_MOBILE = window.matchMedia("(max-width: 768px)").matches;
-
-    /**
-     * CRITICAL FIX:
-     * - If you click directly on an <a> inside the draggable element, we DO NOT start dragging on desktop.
-     * - So the link clicks normally.
-     * - To drag on desktop: drag the padding area around the link text, or hold Alt while dragging on the text.
-     */
+    // ---------- draggable (projects only) ----------
     function makeDraggable(el, linkEl, opts = {}){
       const storeKey = el.dataset.storeKey;
 
@@ -250,31 +245,9 @@
       let startX = 0, startY = 0;
       let offsetX = 0, offsetY = 0;
       let movedEnough = false;
-
       const MOVE_THRESHOLD = opts.moveThreshold ?? 7;
-      const disableDragWhenClickingAnchorOnDesktop = !!opts.disableDragWhenClickingAnchorOnDesktop;
-
-      function shouldSkipDragStart(e){
-        if (!disableDragWhenClickingAnchorOnDesktop) return false;
-
-        // Only matters on desktop
-        if (IS_MOBILE) return false;
-
-        // If the press started on the anchor text, let it click.
-        const startedOnAnchor = !!e.target.closest("a");
-
-        // Allow drag if user holds Alt (power user override)
-        if (startedOnAnchor && !e.altKey) return true;
-
-        return false;
-      }
 
       function pointerDown(e){
-        if (shouldSkipDragStart(e)) {
-          // Important: do NOT set dragging, do NOT preventDefault
-          return;
-        }
-
         dragging = true;
         movedEnough = false;
 
@@ -296,7 +269,6 @@
 
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-
         if (!movedEnough && Math.hypot(dx, dy) > MOVE_THRESHOLD) {
           movedEnough = true;
           linkEl.dataset.dragging = "1";
@@ -323,7 +295,6 @@
         setTimeout(() => { delete linkEl.dataset.dragging; }, 0);
       }
 
-      // Only block click if it actually dragged
       linkEl.addEventListener("click", (e) => {
         if (linkEl.dataset.dragging === "1") {
           e.preventDefault();
@@ -334,64 +305,36 @@
       el.addEventListener("pointerdown", pointerDown);
       window.addEventListener("pointermove", pointerMove, { passive:false });
       window.addEventListener("pointerup", pointerUp, { passive:false });
-    }
 
-    function initElement(el, defaults){
-      const saved = getStored(el.dataset.storeKey);
-      const raw = saved ?? defaults;
-      const snapped = clampToViewport(el, raw.x, raw.y);
+      function initPos(){
+        const saved = getStored(storeKey);
 
-      setElPos(el, snapped.x, snapped.y);
-      setStored(el.dataset.storeKey, snapped);
+        const defaultX = (window.innerWidth * 0.50) - (el.offsetWidth / 2);
+        const defaultY = Math.max(160, (window.innerHeight * 0.55) - (el.offsetHeight / 2));
 
-      bringToFront(el);
-      el.classList.add("ready");
-    }
+        const raw = saved ?? { x: defaultX, y: defaultY };
+        const snapped = clampToViewport(el, raw.x, raw.y);
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const p1Btn = document.getElementById("p1Btn");
-      const p2Btn = document.getElementById("p2Btn");
-      const backWrap = document.getElementById("backWrap");
+        setElPos(el, snapped.x, snapped.y);
+        setStored(storeKey, snapped);
 
-      const backX = IS_MOBILE ? 12 : 70;
+        bringToFront(el);
+        el.classList.add("ready");
+      }
 
-      initElement(backWrap, {
-        x: backX,
-        y: (window.innerHeight / 2) - (backWrap.offsetHeight / 2)
-      });
+      document.addEventListener("DOMContentLoaded", initPos);
 
-      initElement(p1Btn, {
-        x: Math.max(24, (window.innerWidth * 0.30) - (p1Btn.offsetWidth / 2)),
-        y: Math.max(160, (window.innerHeight * 0.55) - (p1Btn.offsetHeight / 2))
-      });
-
-      initElement(p2Btn, {
-        x: Math.min(window.innerWidth - p2Btn.offsetWidth - 24, (window.innerWidth * 0.62) - (p2Btn.offsetWidth / 2)),
-        y: Math.max(160, (window.innerHeight * 0.55) - (p2Btn.offsetHeight / 2))
-      });
-
-      // Projects draggable as usual
-      makeDraggable(p1Btn, document.getElementById("p1Link"));
-      makeDraggable(p2Btn, document.getElementById("p2Link"));
-
-      // BACK draggable BUT clickable on PC:
-      makeDraggable(backWrap, document.getElementById("backLink"), {
-        disableDragWhenClickingAnchorOnDesktop: true,
-        moveThreshold: 7
-      });
-    });
-
-    window.addEventListener("resize", () => {
-      const els = [document.getElementById("p1Btn"), document.getElementById("p2Btn"), document.getElementById("backWrap")];
-      for (const el of els){
-        if (!el) continue;
+      window.addEventListener("resize", () => {
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
         const snapped = clampToViewport(el, left, top);
         setElPos(el, snapped.x, snapped.y);
-        setStored(el.dataset.storeKey, snapped);
-      }
-    });
+        setStored(storeKey, snapped);
+      });
+    }
+
+    makeDraggable(document.getElementById("p1Btn"), document.getElementById("p1Link"));
+    makeDraggable(document.getElementById("p2Btn"), document.getElementById("p2Link"));
   </script>
 </body>
 </html>
