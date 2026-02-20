@@ -31,7 +31,6 @@
       letter-spacing:0.2px;
     }
 
-    /* Logo */
     .logo{
       width:100%;
       display:flex;
@@ -52,7 +51,7 @@
       .logo{ margin-top:-12px; }
     }
 
-    /* Draggable BACK wrapper */
+    /* BACK wrapper is draggable, but clicking the link must always work */
     .backWrap{
       position:absolute;
       left:70px;
@@ -62,7 +61,8 @@
       user-select:none;
       cursor:grab;
 
-      padding:8px 10px;
+      /* Bigger padding = easy drag area (click text still works) */
+      padding:12px 16px;
       border-radius:0;
 
       touch-action:none;
@@ -79,10 +79,12 @@
       font-weight:500;
       display:inline-block;
       white-space:nowrap;
+
+      cursor:pointer;
+      user-select:none;
     }
     .backLink:hover{ color:rgba(17,17,17,0.90); }
 
-    /* Draggable projects */
     .drag{
       position:absolute;
       z-index:10;
@@ -98,7 +100,6 @@
     .drag.ready{ visibility:visible; }
     .drag:active{ cursor:grabbing; }
 
-    /* Selection box */
     .drag.is-dragging,
     .backWrap.is-dragging{
       outline:none;
@@ -114,7 +115,6 @@
       border-radius:0;
     }
 
-    /* Desktop size */
     .drag img{
       width:210px;
       height:210px;
@@ -134,7 +134,6 @@
       letter-spacing:1.8px;
     }
 
-    /* Socials */
     .socials{
       position:fixed;
       left:50%;
@@ -208,14 +207,12 @@
   </div>
 
   <script>
-    // ---------- layering ----------
     let zCounter = 60;
     function bringToFront(el){
       zCounter += 1;
       el.style.zIndex = String(zCounter);
     }
 
-    // ---------- storage ----------
     function getStored(key){
       try { return JSON.parse(localStorage.getItem(key) || "null"); }
       catch { return null; }
@@ -230,7 +227,6 @@
     }
 
     function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
-
     function clampToViewport(el, x, y){
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -241,33 +237,44 @@
 
     const IS_MOBILE = window.matchMedia("(max-width: 768px)").matches;
 
-    // ---------- draggable ----------
-    // FIX for PC click on BACK:
-    // On desktop, BACK requires holding SHIFT to drag.
-    // Normal click (no shift) works instantly.
+    /**
+     * CRITICAL FIX:
+     * - If you click directly on an <a> inside the draggable element, we DO NOT start dragging on desktop.
+     * - So the link clicks normally.
+     * - To drag on desktop: drag the padding area around the link text, or hold Alt while dragging on the text.
+     */
     function makeDraggable(el, linkEl, opts = {}){
       const storeKey = el.dataset.storeKey;
 
-      const MOVE_THRESHOLD = opts.moveThreshold ?? 7;
-      const requireModifierToDrag = !!opts.requireModifierToDrag;
-      const modifierKey = (opts.modifierKey ?? "Shift"); // Shift / Alt / Meta / Control
-      const isMobile = window.matchMedia("(max-width: 768px)").matches;
-
-      let pointerIsDown = false;
       let dragging = false;
       let startX = 0, startY = 0;
       let offsetX = 0, offsetY = 0;
       let movedEnough = false;
 
-      function hasModifier(e){
-        if (modifierKey === "Shift") return e.shiftKey;
-        if (modifierKey === "Alt") return e.altKey;
-        if (modifierKey === "Meta") return e.metaKey;
-        if (modifierKey === "Control") return e.ctrlKey;
+      const MOVE_THRESHOLD = opts.moveThreshold ?? 7;
+      const disableDragWhenClickingAnchorOnDesktop = !!opts.disableDragWhenClickingAnchorOnDesktop;
+
+      function shouldSkipDragStart(e){
+        if (!disableDragWhenClickingAnchorOnDesktop) return false;
+
+        // Only matters on desktop
+        if (IS_MOBILE) return false;
+
+        // If the press started on the anchor text, let it click.
+        const startedOnAnchor = !!e.target.closest("a");
+
+        // Allow drag if user holds Alt (power user override)
+        if (startedOnAnchor && !e.altKey) return true;
+
         return false;
       }
 
-      function beginDrag(e){
+      function pointerDown(e){
+        if (shouldSkipDragStart(e)) {
+          // Important: do NOT set dragging, do NOT preventDefault
+          return;
+        }
+
         dragging = true;
         movedEnough = false;
 
@@ -284,22 +291,7 @@
         e.preventDefault();
       }
 
-      function pointerDown(e){
-        pointerIsDown = true;
-
-        // Desktop-only: if modifier required and not pressed, do NOT start drag.
-        // This allows normal click behavior on PC (fixes your BACK issue).
-        if (requireModifierToDrag && !isMobile && !hasModifier(e)) {
-          dragging = false;
-          movedEnough = false;
-          return;
-        }
-
-        beginDrag(e);
-      }
-
       function pointerMove(e){
-        if (!pointerIsDown) return;
         if (!dragging) return;
 
         const dx = e.clientX - startX;
@@ -315,9 +307,6 @@
       }
 
       function pointerUp(){
-        if (!pointerIsDown) return;
-        pointerIsDown = false;
-
         if (!dragging) return;
         dragging = false;
 
@@ -334,6 +323,7 @@
         setTimeout(() => { delete linkEl.dataset.dragging; }, 0);
       }
 
+      // Only block click if it actually dragged
       linkEl.addEventListener("click", (e) => {
         if (linkEl.dataset.dragging === "1") {
           e.preventDefault();
@@ -346,7 +336,6 @@
       window.addEventListener("pointerup", pointerUp, { passive:false });
     }
 
-    // ---------- init (positions + flicker fix) ----------
     function initElement(el, defaults){
       const saved = getStored(el.dataset.storeKey);
       const raw = saved ?? defaults;
@@ -381,15 +370,14 @@
         y: Math.max(160, (window.innerHeight * 0.55) - (p2Btn.offsetHeight / 2))
       });
 
-      // Drag: projects always draggable
+      // Projects draggable as usual
       makeDraggable(p1Btn, document.getElementById("p1Link"));
       makeDraggable(p2Btn, document.getElementById("p2Link"));
 
-      // Drag: BACK is draggable on mobile, but on PC you must hold SHIFT to drag
-      // so normal clicking works instantly.
+      // BACK draggable BUT clickable on PC:
       makeDraggable(backWrap, document.getElementById("backLink"), {
-        requireModifierToDrag: true,
-        modifierKey: "Shift"
+        disableDragWhenClickingAnchorOnDesktop: true,
+        moveThreshold: 7
       });
     });
 
