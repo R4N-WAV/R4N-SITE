@@ -98,7 +98,7 @@
     }
 
     .drag img{
-      width:108px;     /* change this for the homepage file size */
+      width:108px;     /* homepage file size */
       height:108px;
       object-fit:contain;
       display:block;
@@ -201,11 +201,11 @@
       if (eggTriggered) return;
       eggTriggered = true;
 
-      redout.classList.add("on"); // 0.5s
+      redout.classList.add("on");
 
       setTimeout(() => {
         document.body.classList.add("restore");
-        redout.classList.remove("on"); // 1s back
+        redout.classList.remove("on");
 
         setTimeout(() => {
           document.body.classList.remove("restore");
@@ -214,7 +214,7 @@
       }, 1000);
     }
 
-    // ---------- draggable (improved click behavior) ----------
+    // ---------- draggable (improved click) ----------
     function makeDraggable(el, linkEl){
       const storeKey = el.dataset.storeKey;
 
@@ -252,10 +252,8 @@
           linkEl.dataset.dragging = "1";
         }
 
-        // allow out-of-bounds visually while dragging
         setElPos(el, e.clientX - offsetX, e.clientY - offsetY);
 
-        // easter egg: >10s of real dragging
         if (movedEnough && dragStartTime && (Date.now() - dragStartTime) >= 10000) {
           triggerEasterEgg();
           dragStartTime = null;
