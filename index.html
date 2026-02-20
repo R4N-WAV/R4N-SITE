@@ -32,6 +32,7 @@
       letter-spacing:0.2px;
     }
 
+    /* Easter egg overlay */
     .redout{
       position:fixed;
       inset:0;
@@ -44,6 +45,7 @@
     .redout.on{ opacity:1; }
     .restore .redout{ transition: opacity 1s ease; }
 
+    /* Logo */
     .logo{
       width:100%;
       display:flex;
@@ -64,6 +66,7 @@
       .logo{ margin-top:-12px; }
     }
 
+    /* Draggable button */
     .drag{
       position:absolute;
       z-index:10;
@@ -78,6 +81,7 @@
     .drag.ready{ visibility:visible; }
     .drag:active{cursor:grabbing;}
 
+    /* Selection box (no clipping on mobile) */
     .drag.is-dragging{
       outline:none;
       border-radius:0;
@@ -110,6 +114,7 @@
       letter-spacing:1.8px;
     }
 
+    /* Socials */
     .socials{
       position:fixed;
       left:50%;
@@ -154,12 +159,14 @@
   </div>
 
   <script>
+    // ---------- layering ----------
     let zCounter = 60;
     function bringToFront(el){
       zCounter += 1;
       el.style.zIndex = String(zCounter);
     }
 
+    // ---------- storage ----------
     function getStored(key){
       try { return JSON.parse(localStorage.getItem(key) || "null"); }
       catch { return null; }
@@ -182,7 +189,7 @@
       return { x: clamp(x, 0, vw - w), y: clamp(y, 0, vh - h) };
     }
 
-    // Easter egg (homepage only)
+    // ---------- homepage easter egg ----------
     let dragStartTime = null;
     let eggTriggered = false;
     const redout = document.getElementById("redout");
@@ -191,10 +198,10 @@
       if (eggTriggered) return;
       eggTriggered = true;
 
-      redout.classList.add("on");
+      redout.classList.add("on"); // 0.5s
       setTimeout(() => {
         document.body.classList.add("restore");
-        redout.classList.remove("on");
+        redout.classList.remove("on"); // 1s back
         setTimeout(() => {
           document.body.classList.remove("restore");
           eggTriggered = false;
@@ -202,6 +209,7 @@
       }, 1000);
     }
 
+    // ---------- draggable (improved click) ----------
     function makeDraggable(el, linkEl, opts = {}){
       const storeKey = el.dataset.storeKey;
 
@@ -234,7 +242,6 @@
 
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-
         if (!movedEnough && Math.hypot(dx, dy) > MOVE_THRESHOLD) {
           movedEnough = true;
           linkEl.dataset.dragging = "1";
@@ -313,4 +320,3 @@
   </script>
 </body>
 </html>
-
