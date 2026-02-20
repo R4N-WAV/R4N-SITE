@@ -40,10 +40,10 @@
       opacity:0;
       pointer-events:none;
       z-index:9999;
-      transition: opacity 0.5s ease; /* fade to red in 0.5s */
+      transition: opacity 0.5s ease;
     }
     .redout.on{ opacity:1; }
-    .restore .redout{ transition: opacity 1s ease; } /* fade back in 1s */
+    .restore .redout{ transition: opacity 1s ease; }
 
     /* Logo */
     .logo{
@@ -63,6 +63,11 @@
       display:block;
     }
 
+    /* Mobile-only: logo closer to top */
+    @media (max-width: 768px){
+      .logo{ margin-top:-12px; }
+    }
+
     /* Draggable button */
     .drag{
       position:absolute;
@@ -72,13 +77,13 @@
       text-align:center;
       padding:10px;
       border-radius:0;
-      touch-action:none; /* drag without scrolling */
-      visibility:hidden; /* hide until positioned (fix flicker) */
+      touch-action:none;
+      visibility:hidden; /* hide until positioned */
     }
     .drag.ready{ visibility:visible; }
     .drag:active{cursor:grabbing;}
 
-    /* Selection box FIX: pseudo-element (no clipping on mobile) */
+    /* Selection box (no clipping on mobile) */
     .drag.is-dragging{
       outline:none;
       border-radius:0;
@@ -93,7 +98,7 @@
     }
 
     .drag img{
-      width:108px;     /* adjust size here */
+      width:108px;     /* change this for the homepage file size */
       height:108px;
       object-fit:contain;
       display:block;
@@ -111,7 +116,7 @@
       letter-spacing:1.8px;
     }
 
-    /* Socials footer */
+    /* Socials */
     .socials{
       position:fixed;
       left:50%;
@@ -124,13 +129,8 @@
       user-select:none;
       white-space:nowrap;
     }
-    .socials a{
-      color:inherit;
-      text-decoration:none;
-    }
-    .socials a:hover{
-      color:rgba(17,17,17,0.9);
-    }
+    .socials a{ color:inherit; text-decoration:none; }
+    .socials a:hover{ color:rgba(17,17,17,0.9); }
 
     a{color:inherit;-webkit-tap-highlight-color:transparent;}
   </style>
@@ -145,7 +145,6 @@
     </a>
   </div>
 
-  <!-- Draggable PROJECTS button -->
   <a href="projects.html" id="projectsLink" aria-label="Projects">
     <div class="drag" id="projectsBtn" data-store-key="index:projects">
       <img src="assets/file.png" alt="Projects">
@@ -153,7 +152,6 @@
     </div>
   </a>
 
-  <!-- Socials -->
   <div class="socials" aria-label="Social links">
     <a href="https://www.instagram.com/r4n.wav/" target="_blank" rel="noopener">instagram</a>
     &nbsp;/&nbsp;
@@ -163,14 +161,14 @@
   </div>
 
   <script>
-    // ---------- Z-INDEX layering: last selected always on top ----------
+    // ---------- layering ----------
     let zCounter = 60;
     function bringToFront(el){
       zCounter += 1;
       el.style.zIndex = String(zCounter);
     }
 
-    // Storage helpers
+    // ---------- storage ----------
     function getStored(key){
       try { return JSON.parse(localStorage.getItem(key) || "null"); }
       catch { return null; }
@@ -184,11 +182,8 @@
       el.style.top  = `${y}px`;
     }
 
-    function clamp(v, min, max){
-      return Math.max(min, Math.min(max, v));
-    }
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
-    // Clamp only on release / resize
     function clampToViewport(el, x, y){
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -197,7 +192,7 @@
       return { x: clamp(x, 0, vw - w), y: clamp(y, 0, vh - h) };
     }
 
-    // Easter egg: hold+move for >10s -> redout 0.5s, wait 1s, restore 1s
+    // ---------- homepage easter egg ----------
     let dragStartTime = null;
     let eggTriggered = false;
     const redout = document.getElementById("redout");
@@ -206,11 +201,11 @@
       if (eggTriggered) return;
       eggTriggered = true;
 
-      redout.classList.add("on"); // fade to red (0.5s)
+      redout.classList.add("on"); // 0.5s
 
       setTimeout(() => {
         document.body.classList.add("restore");
-        redout.classList.remove("on"); // fade back (1s)
+        redout.classList.remove("on"); // 1s back
 
         setTimeout(() => {
           document.body.classList.remove("restore");
@@ -219,6 +214,7 @@
       }, 1000);
     }
 
+    // ---------- draggable (improved click behavior) ----------
     function makeDraggable(el, linkEl){
       const storeKey = el.dataset.storeKey;
 
@@ -226,7 +222,7 @@
       let startX = 0, startY = 0;
       let offsetX = 0, offsetY = 0;
       let movedEnough = false;
-      const MOVE_THRESHOLD = 6;
+      const MOVE_THRESHOLD = 7;
 
       function pointerDown(e){
         dragging = true;
@@ -234,7 +230,6 @@
         dragStartTime = Date.now();
 
         bringToFront(el);
-
         el.setPointerCapture?.(e.pointerId);
 
         const rect = el.getBoundingClientRect();
@@ -252,22 +247,24 @@
 
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-        if (!movedEnough && Math.hypot(dx, dy) > MOVE_THRESHOLD) movedEnough = true;
+        if (!movedEnough && Math.hypot(dx, dy) > MOVE_THRESHOLD) {
+          movedEnough = true;
+          linkEl.dataset.dragging = "1";
+        }
 
         // allow out-of-bounds visually while dragging
         setElPos(el, e.clientX - offsetX, e.clientY - offsetY);
 
-        // easter egg: actively dragging/moving for >10s
+        // easter egg: >10s of real dragging
         if (movedEnough && dragStartTime && (Date.now() - dragStartTime) >= 10000) {
           triggerEasterEgg();
           dragStartTime = null;
         }
 
-        if (movedEnough) linkEl.dataset.dragging = "1";
         e.preventDefault();
       }
 
-      function pointerUp(e){
+      function pointerUp(){
         if (!dragging) return;
         dragging = false;
         dragStartTime = null;
@@ -275,7 +272,6 @@
         el.classList.remove("is-dragging");
         el.style.cursor = "grab";
 
-        // snap into viewport on release
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
         const snapped = clampToViewport(el, left, top);
@@ -284,10 +280,8 @@
         setStored(storeKey, snapped);
 
         setTimeout(() => { delete linkEl.dataset.dragging; }, 0);
-        e.preventDefault();
       }
 
-      // Block navigation if drag occurred
       linkEl.addEventListener("click", (e) => {
         if (linkEl.dataset.dragging === "1") {
           e.preventDefault();
@@ -301,7 +295,6 @@
 
       function initPos(){
         const saved = getStored(storeKey);
-
         const defaultX = (window.innerWidth / 2) - (el.offsetWidth / 2);
         const defaultY = Math.max(160, (window.innerHeight / 2) - (el.offsetHeight / 2));
 
@@ -312,7 +305,7 @@
         setStored(storeKey, snapped);
 
         bringToFront(el);
-        el.classList.add("ready"); // show only after positioned (fix flicker)
+        el.classList.add("ready");
       }
 
       document.addEventListener("DOMContentLoaded", initPos);
@@ -321,7 +314,6 @@
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
         const snapped = clampToViewport(el, left, top);
-
         setElPos(el, snapped.x, snapped.y);
         setStored(storeKey, snapped);
       });
