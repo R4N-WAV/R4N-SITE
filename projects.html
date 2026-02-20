@@ -56,6 +56,7 @@
       line-height:1.2;
       max-width:38vw;           /* so it can wrap on mobile nicely */
       user-select:none;
+      z-index:20;
     }
     .backFixed:hover{ color:rgba(17,17,17,0.90); }
 
@@ -73,6 +74,7 @@
       line-height:1.2;
       max-width:38vw;
       user-select:none;
+      z-index:20;
     
       display:none;
     }
@@ -90,6 +92,7 @@
       justify-content:center;
       align-items:center;
       width:auto;
+      z-index:10;
     }
     .logo a{display:inline-flex;text-decoration:none;}
     .logo img{
@@ -105,6 +108,27 @@
       .topBar{ height:78px; }
       .logo img{ width:136px; height:136px; } /* keep your same logo sizing */
       .backFixed{ max-width:46vw; }           /* wraps if needed */
+    }
+
+    @media (min-width: 769px){
+      /* Desktop: use the same logo padding/positioning as index.html */
+      :root{ --padY: 0px; }
+      .topBar{
+        height:auto;
+        min-height:136px;   /* match logo height so BACK aligns nicely */
+        padding-top:0;
+      }
+      .logo{
+        position:relative;
+        left:auto;
+        top:auto;
+        transform:none;
+        width:100%;
+        display:flex;
+        justify-content:center;
+        padding-top:0px;
+        margin-top:-6px;
+      }
     }
 
     /* Draggable projects */
