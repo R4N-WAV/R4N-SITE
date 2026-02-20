@@ -32,7 +32,6 @@
       letter-spacing:0.2px;
     }
 
-    /* Easter egg overlay */
     .redout{
       position:fixed;
       inset:0;
@@ -45,7 +44,6 @@
     .redout.on{ opacity:1; }
     .restore .redout{ transition: opacity 1s ease; }
 
-    /* Logo */
     .logo{
       width:100%;
       display:flex;
@@ -62,13 +60,10 @@
       object-fit:contain;
       display:block;
     }
-
-    /* Mobile-only: logo closer to top */
     @media (max-width: 768px){
       .logo{ margin-top:-12px; }
     }
 
-    /* Draggable button */
     .drag{
       position:absolute;
       z-index:10;
@@ -83,7 +78,6 @@
     .drag.ready{ visibility:visible; }
     .drag:active{cursor:grabbing;}
 
-    /* Selection box */
     .drag.is-dragging{
       outline:none;
       border-radius:0;
@@ -98,8 +92,8 @@
     }
 
     .drag img{
-      width:70px;
-      height:70px;
+      width:108px;
+      height:108px;
       object-fit:contain;
       display:block;
       margin:0 auto;
@@ -116,7 +110,6 @@
       letter-spacing:1.8px;
     }
 
-    /* Socials */
     .socials{
       position:fixed;
       left:50%;
@@ -161,14 +154,12 @@
   </div>
 
   <script>
-    // ---------- layering ----------
     let zCounter = 60;
     function bringToFront(el){
       zCounter += 1;
       el.style.zIndex = String(zCounter);
     }
 
-    // ---------- storage ----------
     function getStored(key){
       try { return JSON.parse(localStorage.getItem(key) || "null"); }
       catch { return null; }
@@ -183,7 +174,6 @@
     }
 
     function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
-
     function clampToViewport(el, x, y){
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -192,7 +182,7 @@
       return { x: clamp(x, 0, vw - w), y: clamp(y, 0, vh - h) };
     }
 
-    // ---------- homepage easter egg ----------
+    // Easter egg (homepage only)
     let dragStartTime = null;
     let eggTriggered = false;
     const redout = document.getElementById("redout");
@@ -212,32 +202,19 @@
       }, 1000);
     }
 
-    // ---------- draggable (improved click) ----------
     function makeDraggable(el, linkEl, opts = {}){
       const storeKey = el.dataset.storeKey;
 
-      const MOVE_THRESHOLD = opts.moveThreshold ?? 7;
-      const requireModifierToDrag = !!opts.requireModifierToDrag; // e.g., for BACK on desktop
-      const modifierKey = (opts.modifierKey ?? "Shift");          // "Shift" | "Alt" | "Meta" | "Control"
-      const isMobile = window.matchMedia("(max-width: 768px)").matches;
-
-      let pointerIsDown = false;
       let dragging = false;
       let startX = 0, startY = 0;
       let offsetX = 0, offsetY = 0;
       let movedEnough = false;
+      const MOVE_THRESHOLD = opts.moveThreshold ?? 7;
 
-      function hasModifier(e){
-        if (modifierKey === "Shift") return e.shiftKey;
-        if (modifierKey === "Alt") return e.altKey;
-        if (modifierKey === "Meta") return e.metaKey;
-        if (modifierKey === "Control") return e.ctrlKey;
-        return false;
-      }
-
-      function beginDrag(e){
+      function pointerDown(e){
         dragging = true;
         movedEnough = false;
+        dragStartTime = Date.now();
 
         bringToFront(el);
         el.setPointerCapture?.(e.pointerId);
@@ -249,29 +226,10 @@
 
         el.classList.add("is-dragging");
         el.style.cursor = "grabbing";
-
-        // prevent text selection / native drag
         e.preventDefault();
       }
 
-      function pointerDown(e){
-        pointerIsDown = true;
-
-        // For desktop UX: optionally require a modifier (Shift) to drag,
-        // so normal click always works.
-        if (requireModifierToDrag && !isMobile && !hasModifier(e)) {
-          // don't start drag; let click happen
-          dragging = false;
-          movedEnough = false;
-          return;
-        }
-
-        dragStartTime = Date.now();
-        beginDrag(e);
-      }
-
       function pointerMove(e){
-        if (!pointerIsDown) return;
         if (!dragging) return;
 
         const dx = e.clientX - startX;
@@ -284,7 +242,6 @@
 
         setElPos(el, e.clientX - offsetX, e.clientY - offsetY);
 
-        // homepage easter egg only
         if (opts.enableEasterEgg && movedEnough && dragStartTime && (Date.now() - dragStartTime) >= 10000) {
           triggerEasterEgg();
           dragStartTime = null;
@@ -294,9 +251,6 @@
       }
 
       function pointerUp(){
-        if (!pointerIsDown) return;
-        pointerIsDown = false;
-
         if (!dragging) return;
         dragging = false;
         dragStartTime = null;
@@ -314,7 +268,6 @@
         setTimeout(() => { delete linkEl.dataset.dragging; }, 0);
       }
 
-      // Only block click if it truly dragged
       linkEl.addEventListener("click", (e) => {
         if (linkEl.dataset.dragging === "1") {
           e.preventDefault();
@@ -360,4 +313,3 @@
   </script>
 </body>
 </html>
-
