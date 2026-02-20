@@ -48,8 +48,6 @@
       object-fit:contain;
       display:block;
     }
-
-    /* Mobile-only: logo closer to top */
     @media (max-width: 768px){
       .logo{ margin-top:-12px; }
     }
@@ -67,8 +65,8 @@
       padding:8px 10px;
       border-radius:0;
 
-      touch-action:none; /* drag */
-      visibility:hidden; /* hide until positioned */
+      touch-action:none;
+      visibility:hidden;
     }
     .backWrap.ready{ visibility:visible; }
     .backWrap:active{ cursor:grabbing; }
@@ -94,16 +92,13 @@
       padding:10px;
       border-radius:0;
 
-      /* IMPORTANT: pointer events pinch+drag */
       touch-action:none;
-
-      visibility:hidden; /* hide until positioned */
-      transform-origin: top left;
+      visibility:hidden;
     }
     .drag.ready{ visibility:visible; }
     .drag:active{ cursor:grabbing; }
 
-    /* Selection box (no clipping on mobile) */
+    /* Selection box */
     .drag.is-dragging,
     .backWrap.is-dragging{
       outline:none;
@@ -119,7 +114,7 @@
       border-radius:0;
     }
 
-    /* Base size (desktop unchanged) */
+    /* Desktop size */
     .drag img{
       width:210px;
       height:210px;
@@ -155,15 +150,14 @@
     .socials a{ color:inherit; text-decoration:none; }
     .socials a:hover{ color:rgba(17,17,17,0.9); }
 
-    /* Mobile-only adjustments:
-       - Start smaller via JS scale
-       - Ensure image is as wide or wider than title by constraining title width to match image block
-    */
+    /* Mobile-only: project buttons same size + title width <= image width */
     @media (max-width: 768px){
-      /* Keep the *element* itself compact before scaling; label will wrap within this width */
-      .drag img{ width:160px; height:160px; }
+      .drag img{
+        width:170px;
+        height:170px;
+      }
       .drag .label{
-        width:160px;      /* title box can't be wider than image */
+        width:170px;
         margin-left:auto;
         margin-right:auto;
         white-space:normal;
@@ -177,7 +171,6 @@
 </head>
 
 <body>
-  <!-- Draggable BACK -->
   <div class="backWrap" id="backWrap" data-store-key="projects:back">
     <a class="backLink" id="backLink" href="index.html" aria-label="Back to home">&lt; - BACK</a>
   </div>
@@ -188,21 +181,19 @@
     </a>
   </div>
 
-  <!-- Project 1 -->
   <a href="https://open.spotify.com/album/2pHA2yqsAC9uum0lE1kyV5?si=qG4s6773SyW9N3YUAzow8w"
      target="_blank" rel="noopener"
      id="p1Link" aria-label="TI KNIVER I HJERTET">
-    <div class="drag" id="p1Btn" data-store-key="projects:p1" data-scale-key="projects:p1:scale">
+    <div class="drag" id="p1Btn" data-store-key="projects:p1">
       <img src="assets/project1.png" alt="Project 1">
       <div class="label">TI KNIVER I HJERTET</div>
     </div>
   </a>
 
-  <!-- Project 2 -->
   <a href="https://open.spotify.com/album/4hGT9RG7lSGz9MtX85Jpta?si=MaSikX3wTL-xhOIH3aTsnQ"
      target="_blank" rel="noopener"
      id="p2Link" aria-label="FLAWLESS FASADE">
-    <div class="drag" id="p2Btn" data-store-key="projects:p2" data-scale-key="projects:p2:scale">
+    <div class="drag" id="p2Btn" data-store-key="projects:p2">
       <img src="assets/project2.png" alt="Project 2">
       <div class="label">FLAWLESS FASADE</div>
     </div>
@@ -250,20 +241,33 @@
 
     const IS_MOBILE = window.matchMedia("(max-width: 768px)").matches;
 
-    // ---------- draggable (improved click behavior; works for BACK) ----------
-    function makeDraggable(el, linkEl){
+    // ---------- draggable ----------
+    // FIX for PC click on BACK:
+    // On desktop, BACK requires holding SHIFT to drag.
+    // Normal click (no shift) works instantly.
+    function makeDraggable(el, linkEl, opts = {}){
       const storeKey = el.dataset.storeKey;
 
+      const MOVE_THRESHOLD = opts.moveThreshold ?? 7;
+      const requireModifierToDrag = !!opts.requireModifierToDrag;
+      const modifierKey = (opts.modifierKey ?? "Shift"); // Shift / Alt / Meta / Control
+      const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+      let pointerIsDown = false;
       let dragging = false;
       let startX = 0, startY = 0;
       let offsetX = 0, offsetY = 0;
       let movedEnough = false;
-      const MOVE_THRESHOLD = 7;
 
-      function pointerDown(e){
-        // If pinching on this element, don't start drag
-        if (el.dataset.pinching === "1") return;
+      function hasModifier(e){
+        if (modifierKey === "Shift") return e.shiftKey;
+        if (modifierKey === "Alt") return e.altKey;
+        if (modifierKey === "Meta") return e.metaKey;
+        if (modifierKey === "Control") return e.ctrlKey;
+        return false;
+      }
 
+      function beginDrag(e){
         dragging = true;
         movedEnough = false;
 
@@ -280,11 +284,27 @@
         e.preventDefault();
       }
 
+      function pointerDown(e){
+        pointerIsDown = true;
+
+        // Desktop-only: if modifier required and not pressed, do NOT start drag.
+        // This allows normal click behavior on PC (fixes your BACK issue).
+        if (requireModifierToDrag && !isMobile && !hasModifier(e)) {
+          dragging = false;
+          movedEnough = false;
+          return;
+        }
+
+        beginDrag(e);
+      }
+
       function pointerMove(e){
+        if (!pointerIsDown) return;
         if (!dragging) return;
 
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
+
         if (!movedEnough && Math.hypot(dx, dy) > MOVE_THRESHOLD) {
           movedEnough = true;
           linkEl.dataset.dragging = "1";
@@ -295,6 +315,9 @@
       }
 
       function pointerUp(){
+        if (!pointerIsDown) return;
+        pointerIsDown = false;
+
         if (!dragging) return;
         dragging = false;
 
@@ -323,121 +346,7 @@
       window.addEventListener("pointerup", pointerUp, { passive:false });
     }
 
-    // ---------- smooth pinch-to-zoom (mobile only, non-glitchy) ----------
-    function makePinchZoom(el){
-      const scaleKey = el.dataset.scaleKey;
-
-      // Mobile start smaller; desktop = 1 (no scaling feature)
-      const START_SCALE = IS_MOBILE ? 0.72 : 1;
-
-      // Boundaries (mobile only)
-      const MIN_SCALE = IS_MOBILE ? 0.45 : 1;
-      const MAX_SCALE = IS_MOBILE ? 1.35 : 1;
-
-      let scale = (typeof getStored(scaleKey) === "number") ? getStored(scaleKey) : START_SCALE;
-      scale = clamp(scale, MIN_SCALE, MAX_SCALE);
-
-      // Apply scale
-      el.style.transform = `scale(${scale})`;
-      setStored(scaleKey, scale);
-
-      // Track pointers for pinch
-      const pts = new Map(); // pointerId -> {x,y}
-      let baseDist = 0;
-      let baseScale = scale;
-      let rafPending = false;
-
-      function dist(a, b){
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        return Math.hypot(dx, dy);
-      }
-
-      function applyPinch(){
-        rafPending = false;
-        if (pts.size !== 2) return;
-
-        const arr = Array.from(pts.values());
-        const d = dist(arr[0], arr[1]);
-
-        if (!baseDist) return;
-        const ratio = d / baseDist;
-
-        scale = clamp(baseScale * ratio, MIN_SCALE, MAX_SCALE);
-        el.style.transform = `scale(${scale})`;
-        setStored(scaleKey, scale);
-      }
-
-      function snapIntoView(){
-        const left = parseFloat(el.style.left || "0");
-        const top  = parseFloat(el.style.top  || "0");
-        const snapped = clampToViewport(el, left, top);
-        setElPos(el, snapped.x, snapped.y);
-        setStored(el.dataset.storeKey, snapped);
-      }
-
-      if (!IS_MOBILE) return; // desktop unchanged
-
-      el.addEventListener("pointerdown", (e) => {
-        // only consider touch/pen for pinch; ignore mouse
-        if (e.pointerType === "mouse") return;
-
-        bringToFront(el);
-        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        // If second finger goes down, begin pinch
-        if (pts.size === 2){
-          el.dataset.pinching = "1";
-          const arr = Array.from(pts.values());
-          baseDist = dist(arr[0], arr[1]);
-          baseScale = scale;
-        }
-      }, { passive:false });
-
-      el.addEventListener("pointermove", (e) => {
-        if (e.pointerType === "mouse") return;
-        if (!pts.has(e.pointerId)) return;
-
-        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-        if (pts.size === 2){
-          // throttle with rAF to prevent lag/jitter
-          if (!rafPending){
-            rafPending = true;
-            requestAnimationFrame(applyPinch);
-          }
-          e.preventDefault();
-        }
-      }, { passive:false });
-
-      function endPointer(e){
-        if (e.pointerType === "mouse") return;
-
-        if (pts.has(e.pointerId)) pts.delete(e.pointerId);
-
-        if (pts.size < 2){
-          baseDist = 0;
-          // pinch ended
-          if (el.dataset.pinching === "1"){
-            delete el.dataset.pinching;
-            snapIntoView();
-          }
-        }
-      }
-
-      el.addEventListener("pointerup", endPointer, { passive:false });
-      el.addEventListener("pointercancel", endPointer, { passive:false });
-      el.addEventListener("pointerleave", endPointer, { passive:false });
-
-      window.addEventListener("resize", () => {
-        scale = clamp(scale, MIN_SCALE, MAX_SCALE);
-        el.style.transform = `scale(${scale})`;
-        setStored(scaleKey, scale);
-        snapIntoView();
-      });
-    }
-
-    // ---------- init positions (flicker fix) ----------
+    // ---------- init (positions + flicker fix) ----------
     function initElement(el, defaults){
       const saved = getStored(el.dataset.storeKey);
       const raw = saved ?? defaults;
@@ -455,7 +364,6 @@
       const p2Btn = document.getElementById("p2Btn");
       const backWrap = document.getElementById("backWrap");
 
-      // Back starts closer to left edge ON MOBILE only
       const backX = IS_MOBILE ? 12 : 70;
 
       initElement(backWrap, {
@@ -473,14 +381,16 @@
         y: Math.max(160, (window.innerHeight * 0.55) - (p2Btn.offsetHeight / 2))
       });
 
-      // drag
-      makeDraggable(backWrap, document.getElementById("backLink"));
+      // Drag: projects always draggable
       makeDraggable(p1Btn, document.getElementById("p1Link"));
       makeDraggable(p2Btn, document.getElementById("p2Link"));
 
-      // pinch (mobile only, smoother)
-      makePinchZoom(p1Btn);
-      makePinchZoom(p2Btn);
+      // Drag: BACK is draggable on mobile, but on PC you must hold SHIFT to drag
+      // so normal clicking works instantly.
+      makeDraggable(backWrap, document.getElementById("backLink"), {
+        requireModifierToDrag: true,
+        modifierKey: "Shift"
+      });
     });
 
     window.addEventListener("resize", () => {
