@@ -271,14 +271,12 @@
     .projOverlay__backdrop{
       position:absolute;
       inset:0;
-      /* slightly darker, per your request */
-      /* darker (less transparent) per latest feedback */
-      background:rgba(0,0,0,0.72);
+      background:#000000;
       opacity:0;
-      transition:opacity 220ms ease;
+      transition:opacity 320ms ease;
     }
 
-    .projOverlay__panel{
+.projOverlay__panel{
       position:absolute;
       left:50%;
       top:50%;
@@ -448,6 +446,45 @@
       pointer-events:none;
     }
 
+
+    /* ---------- Inversion backdrop mode (replaces grey) ---------- */
+
+    /* Inverted header logo (only thing visible behind the panel) */
+    .projOverlay__invHeader{
+      position:absolute;
+      left:50%;
+      top:14px;
+      transform:translateX(-50%);
+      z-index:55;
+      opacity:0;
+      transition:opacity 320ms ease;
+      pointer-events:none; /* purely visual */
+    }
+    .projOverlay__invHeader img{
+      width:136px;
+      height:136px;
+      object-fit:contain;
+      display:block;
+      /* Invert the logo */
+      filter:invert(1);
+    }
+    @media (max-width: 768px){
+      .projOverlay__invHeader{ top:8px; }
+      .projOverlay__invHeader img{ width:136px; height:136px; }
+    }
+
+    .projOverlay.is-open .projOverlay__invHeader{ opacity:1; }
+
+    /* While modal is open, fully hide the page content (projects, socials, header). */
+    body.modal-open .drag,
+    body.modal-open .socials,
+    body.modal-open .backFixed,
+    body.modal-open .fallFixed,
+    body.modal-open .logo{
+      visibility:hidden;
+      opacity:0;
+    }
+
   </style>
 </head>
 
@@ -469,7 +506,7 @@
      class="projectLink"
      aria-label="TI KNIVER I HJERTET"
      data-project-name="TI KNIVER I HJERTET"
-     data-project-desc="Debutlåt i samarbeid med <a href='https://www.instagram.com/bhaai________/' target='_blank' rel='noopener noreferrer'>Bhaai</a>. En refleksjon over svikt, tillit og sårbarhet.<br><strong>Prod:</strong> <a href='https://www.instagram.com/rumblinmusic/' target='_blank' rel='noopener noreferrer'>RumblinMusic</a>, <a href='https://www.instagram.com/r4n.wav/' target='_blank' rel='noopener noreferrer'>R4N</a>."
+     data-project-desc="R4N debuterer sammen med <a href='https://www.instagram.com/bhaai________/' target='_blank' rel='noopener noreferrer'>Bhaai</a> med en låt om tillit som sprekker og sårbarhet som blir gjemt bort. Den treffer akkurat der folk vanligvis later som ingenting.<br><strong>Prod:</strong> <a href='https://www.instagram.com/rumblinmusic/' target='_blank' rel='noopener noreferrer'>Rumblin</a>, <a href='https://www.instagram.com/r4n.wav/' target='_blank' rel='noopener noreferrer'>R4N</a>."
      data-project-img="../assets/project1.png"
      data-spotify-url="https://open.spotify.com/album/2pHA2yqsAC9uum0lE1kyV5?si=qG4s6773SyW9N3YUAzow8w"
      data-apple-url="https://music.apple.com/no/song/ti-kniver-i-hjertet/1820238689">
@@ -485,7 +522,7 @@
      class="projectLink"
      aria-label="FLAWLESS FASADE"
      data-project-name="FLAWLESS FASADE"
-     data-project-desc="Første soloutgivelse, skrevet som 17-åring. En refleksjon rundt identitet og fasader.<br><strong>Prod:</strong> <a href='https://www.instagram.com/rumblinmusic/' target='_blank' rel='noopener noreferrer'>RumblinMusic</a>, <a href='https://www.instagram.com/r4n.wav/' target='_blank' rel='noopener noreferrer'>R4N</a>."
+     data-project-desc="R4N slipper sin første sololåt, skrevet som 17-åring. En historie om å putte på en rolle og kalle det “seg selv”, der teksten avslører fasaden linje for linje.<br><strong>Prod:</strong> <a href='https://www.instagram.com/rumblinmusic/' target='_blank' rel='noopener noreferrer'>RumblinMusic</a>, <a href='https://www.instagram.com/r4n.wav/' target='_blank' rel='noopener noreferrer'>R4N</a>."
      data-project-img="../assets/project2.png"
      data-spotify-url="https://open.spotify.com/album/4hGT9RG7lSGz9MtX85Jpta?si=MaSikX3wTL-xhOIH3aTsnQ"
      data-apple-url="https://music.apple.com/no/song/flawless-fasade/1829146937">
@@ -505,6 +542,12 @@
   <!-- Project overlay modal -->
   <div class="projOverlay" id="projOverlay" aria-hidden="true">
     <div class="projOverlay__backdrop" id="projBackdrop"></div>
+    <div class="projOverlay__invHeader" aria-hidden="true">
+      <a href="../" tabindex="-1" aria-label="Home (inverted)">
+        <img src="../assets/logo.png" alt="Logo">
+      </a>
+    </div>
+
 
     <div class="projOverlay__panel" role="dialog" aria-modal="true" aria-labelledby="projTitle">
       <button class="projOverlay__close" id="projClose" aria-label="Close project">&times;</button>
