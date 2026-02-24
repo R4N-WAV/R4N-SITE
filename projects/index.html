@@ -273,7 +273,7 @@
       inset:0;
       background:#000000;
       opacity:0;
-      transition:opacity 320ms ease;
+      transition:opacity 620ms cubic-bezier(.2,.9,.2,1);
     }
 
 .projOverlay__panel{
@@ -455,7 +455,7 @@
       left:50%;
       top:8px;
       transform:translateX(-50%);
-      z-index:1001;
+      z-index:1001; /* above backdrop, below panel */
       opacity:0;
       transition:opacity 320ms ease;
       pointer-events:none; /* purely visual */
