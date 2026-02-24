@@ -123,14 +123,22 @@
 <body>
   <div class="logo" id="logoBlock">
     <a href="./" aria-label="Home">
-      <img src="assets/logo.png" alt="Logo">
+      <!-- Fallback: if your images aren't inside /assets, this will still work -->
+      <img src="assets/logo.png" alt="Logo" onerror="this.onerror=null;this.src='logo.png';">
     </a>
   </div>
 
   <a href="projects/" id="projectsLink" aria-label="Projects">
     <div class="drag" id="projectsBtn" data-store-key="index:projects">
-      <img src="assets/file.png" alt="Projects">
+      <img src="assets/file.png" alt="Projects" onerror="this.onerror=null;this.src='file.png';">
       <div class="label">PROJECTS</div>
+    </div>
+  </a>
+
+  <a href="new/index.html" id="mysteryLink" aria-label="???">
+    <div class="drag" id="mysteryBtn" data-store-key="index:mystery">
+      <img src="assets/new.png" alt="???" onerror="this.onerror=null;this.src='new.png';">
+      <div class="label">???</div>
     </div>
   </a>
 
@@ -173,9 +181,90 @@
       return { x: clamp(x, 0, vw - w), y: clamp(y, 0, vh - h) };
     }
 
+
+    // ---------- positioning safety (avoid logo/socials + avoid overlapping buttons) ----------
+    function rectsOverlap(a, b, pad = 0){
+      return !(
+        (a.right  + pad) <= b.left  ||
+        (a.left   - pad) >= b.right ||
+        (a.bottom + pad) <= b.top   ||
+        (a.top    - pad) >= b.bottom
+      );
+    }
+
+    function rectForElAt(el, x, y){
+      return { left:x, top:y, right:x + el.offsetWidth, bottom:y + el.offsetHeight };
+    }
+
+    function getForbiddenRects(pad = 18){
+      const out = [];
+      const logo = document.getElementById("logoBlock");
+      const socials = document.querySelector(".socials");
+      if (logo){
+        const r = logo.getBoundingClientRect();
+        out.push({ left:r.left - pad, top:r.top - pad, right:r.right + pad, bottom:r.bottom + pad });
+      }
+      if (socials){
+        const r = socials.getBoundingClientRect();
+        out.push({ left:r.left - pad, top:r.top - pad, right:r.right + pad, bottom:r.bottom + pad });
+      }
+      return out;
+    }
+
+    function resolveSafePosition(el, x, y, avoidEls = [], forbiddenRects = [], pad = 14){
+      // Iteratively nudge down / sideways until it doesn't overlap forbidden areas or other buttons.
+      let pos = clampToViewport(el, x, y);
+      let tries = 0;
+
+      while (tries < 60){
+        const r = rectForElAt(el, pos.x, pos.y);
+
+        // Forbidden areas first
+        let hit = forbiddenRects.find(fr => rectsOverlap(r, fr, 0));
+        if (hit){
+          // Push below the forbidden rect if we are intersecting it; otherwise nudge sideways.
+          const pushDown = hit.bottom + pad;
+          pos = clampToViewport(el, pos.x, pushDown);
+          tries++;
+          continue;
+        }
+
+        // Other draggable buttons
+        let otherHit = null;
+        for (const other of avoidEls){
+          if (!other || other === el) continue;
+          const orc = other.getBoundingClientRect();
+          const obr = { left:orc.left, top:orc.top, right:orc.right, bottom:orc.bottom };
+          if (rectsOverlap(r, obr, pad)){
+            otherHit = obr;
+            break;
+          }
+        }
+        if (otherHit){
+          // Stack it below the other button (keeps them close but not overlapping).
+          const pushDown = otherHit.bottom + pad;
+          pos = clampToViewport(el, pos.x, pushDown);
+
+          // If we hit the bottom, try nudging sideways a bit.
+          if (pos.y >= window.innerHeight - el.offsetHeight - 1){
+            pos = clampToViewport(el, pos.x + (el.offsetWidth * 0.6), pos.y - (el.offsetHeight * 0.6));
+          }
+          tries++;
+          continue;
+        }
+
+        break; // safe
+      }
+
+      return pos;
+    }
+
     // ---------- draggable (with orbital easter egg) ----------
     function makeDraggable(el, linkEl, opts = {}){
       const storeKey = el.dataset.storeKey;
+      const avoidEls = opts.avoidEls ?? [];
+      const forbiddenRectsFn = opts.forbiddenRectsFn ?? (() => getForbiddenRects(opts.forbiddenPad ?? 18));
+      const safePad = opts.safePad ?? 14;
 
       let dragging = false;
       let startX = 0, startY = 0;
@@ -506,7 +595,10 @@
 
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
-        const snapped = clampToViewport(el, left, top);
+        let snapped = clampToViewport(el, left, top);
+        // After the user drags, allow overlapping/stacking with other buttons.
+        // Still keep it inside the viewport and away from logo/socials.
+        snapped = resolveSafePosition(el, snapped.x, snapped.y, [], forbiddenRectsFn(), safePad);
 
         setElPos(el, snapped.x, snapped.y);
         setStored(storeKey, snapped);
@@ -525,40 +617,78 @@
       window.addEventListener("pointermove", pointerMove, { passive:false });
       window.addEventListener("pointerup", pointerUp, { passive:false });
 
-      function initPos(){
+      function initPos(defaultX, defaultY){
         const saved = getStored(storeKey);
-        const defaultX = (window.innerWidth / 2) - (el.offsetWidth / 2);
-        const defaultY = Math.max(160, (window.innerHeight / 2) - (el.offsetHeight / 2));
 
-        const raw = saved ?? { x: defaultX, y: defaultY };
-        const snapped = clampToViewport(el, raw.x, raw.y);
-
-        setElPos(el, snapped.x, snapped.y);
-        setStored(storeKey, snapped);
+        // If the user already positioned it before, restore that exact position (only clamp to viewport).
+        // If it's the first visit, place it safely (avoid logo/socials + other floating buttons).
+        if (saved){
+          const snapped = clampToViewport(el, saved.x, saved.y);
+          setElPos(el, snapped.x, snapped.y);
+          setStored(storeKey, snapped);
+        } else {
+          const raw = { x: defaultX, y: defaultY };
+          let snapped = clampToViewport(el, raw.x, raw.y);
+          snapped = resolveSafePosition(el, snapped.x, snapped.y, avoidEls, forbiddenRectsFn(), safePad);
+          setElPos(el, snapped.x, snapped.y);
+          setStored(storeKey, snapped);
+        }
 
         bringToFront(el);
         el.classList.add("ready");
         el.style.cursor = "grab";
       }
 
-      document.addEventListener("DOMContentLoaded", initPos);
-
       window.addEventListener("resize", () => {
         const left = parseFloat(el.style.left || "0");
         const top  = parseFloat(el.style.top  || "0");
-        const snapped = clampToViewport(el, left, top);
+        let snapped = clampToViewport(el, left, top);
+        // Keep resize from forcing buttons apart; allow stacking.
+        snapped = resolveSafePosition(el, snapped.x, snapped.y, [], forbiddenRectsFn(), safePad);
         setElPos(el, snapped.x, snapped.y);
         setStored(storeKey, snapped);
       });
+
+      return { initPos, el, linkEl, storeKey };
     }
 
-    makeDraggable(
+    // ---------- init both floating buttons (non-overlapping on first load) ----------
+    const floatingEls = [];
+
+    const projectsDrag = makeDraggable(
       document.getElementById("projectsBtn"),
       document.getElementById("projectsLink"),
       {
-        enableOrbitEgg: true
+        enableOrbitEgg: true,
+        avoidEls: floatingEls
       }
     );
+
+    const mysteryDrag = makeDraggable(
+      document.getElementById("mysteryBtn"),
+      document.getElementById("mysteryLink"),
+      {
+        enableOrbitEgg: true,
+        avoidEls: floatingEls
+      }
+    );
+
+    floatingEls.push(projectsDrag.el, mysteryDrag.el);
+    document.addEventListener("DOMContentLoaded", () => {
+      // base center placement, then the safety resolver will keep them away from logo/socials + each other.
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      const w1 = projectsDrag.el.offsetWidth;
+      const h1 = projectsDrag.el.offsetHeight;
+
+      const cx = (vw / 2) - (w1 / 2);
+      const cy = Math.max(160, (vh / 2) - (h1 / 2));
+
+      // Put them near each other but not overlapping on first entry.
+      projectsDrag.initPos(cx - 90, cy);
+      mysteryDrag.initPos(cx + 90, cy + 20);
+    });
   </script>
 </body>
 </html>
