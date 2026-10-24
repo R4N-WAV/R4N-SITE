@@ -73,3 +73,23 @@ Work happens in this repo (Site-Testing-Area), pushed to `main` after every step
   load; BOOKING pill in css/site.css). Remaining: k (tests on phones/desktop incl. ACCESS
   regression), then deploy to R4N-SITE with the sync script (keeps CNAME).
 - Round 2 deployed to R4N-SITE.
+
+## Round 3 (R4N's feedback), steps
+- [x] a. BOOKING button: not ignorable. Filled crimson pill (the passport's colour), gold text, a
+       little larger, warm glow pulse; its outline must never be clipped (own padding wins)
+- [x] b. Spine: same material and grain density as the covers (UVs by arc length)
+- [x] c. STUDIO in the same style as 51: bold, filled, engraved line, filling its band
+- [x] d. Cover texture: much finer, no visible tile/grid (fbm micro grain over the whole cover)
+- [x] e. Inside: warm beige book paper (photo ref), paper fibres; the red spine must not show
+       inside (flipped pages cover the gutter)
+- [x] f. Opening flips quickly through ~10 pages (curling, staggered) before landing on the spread
+- [x] g. Glow when open: the whole spread glows (light from between the pages): light sheet grows
+       to the spread's outline, a warm gutter glow, a flare while the pages flip
+- [x] h. Open passport fills the screen (desktop and phones)
+- [x] i. Spread layout = memories of a trip (sketch): video frame (stop-motion loop placeholder),
+       "R4N LIVE", BOOK NOW button (mailto for now), postage stamps around, rubber stamps incl.
+       "UKM-FESTIVALEN". Stamps/video/button as their own planes (raycast for BOOK NOW).
+       Vertical (phone) layout arranged for landscape pages.
+- [x] j. Tests (desktop, phones, ACCESS regression), deploy
+- Round 3 status: a-i built (js/booking.js: fbm grain, engraved STUDIO, beige paper, 10 riffling
+  leaves, spread glow + gutter glow, memories with stamps/film/BOOK NOW). Remaining: j (tests, deploy).
